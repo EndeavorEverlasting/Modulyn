@@ -1,0 +1,77 @@
+name: Create Checkpoint
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Checkpoint date (YYYY-MM-DD). Leave blank to use today (UTC). Only the format is validated, not calendar correctness.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  checkpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Resolve and validate checkpoint date
+        id: resolve_date
+        env:
+          INPUT_DATE: ${{ github.event.inputs.date }}
+        run: |
+          if [ -z "$INPUT_DATE" ]; then
+            DATE="$(date -u '+%Y-%m-%d')"
+          else
+            DATE="$INPUT_DATE"
+          fi
+          if ! echo "$DATE" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'; then
+            echo "::error::Invalid date format '$DATE'. Expected YYYY-MM-DD."
+            exit 1
+          fi
+          echo "date=$DATE" >> "$GITHUB_OUTPUT"
+          echo "tag=checkpoint/$DATE" >> "$GITHUB_OUTPUT"
+
+      - name: Preflight — check for existing tag or branch
+        run: |
+          DATE="${{ steps.resolve_date.outputs.date }}"
+          TAG="checkpoint/$DATE"
+          if git ls-remote --exit-code origin "refs/tags/$TAG" > /dev/null 2>&1; then
+            echo "::error::Tag refs/tags/$TAG already exists on origin. Aborting to avoid overwriting an existing checkpoint."
+            exit 1
+          fi
+          if git ls-remote --exit-code origin "refs/heads/$TAG" > /dev/null 2>&1; then
+            echo "::error::Branch refs/heads/$TAG already exists on origin. Aborting to avoid overwriting an existing checkpoint."
+            exit 1
+          fi
+
+      - name: Create and push tag
+        run: |
+          DATE="${{ steps.resolve_date.outputs.date }}"
+          TAG="checkpoint/$DATE"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "$TAG"
+          git push origin "refs/tags/$TAG"
+
+      - name: Push branch snapshot
+        run: |
+          DATE="${{ steps.resolve_date.outputs.date }}"
+          TAG="checkpoint/$DATE"
+          git push origin "HEAD:refs/heads/$TAG"
+
+      - name: Summary
+        run: |
+          DATE="${{ steps.resolve_date.outputs.date }}"
+          TAG="checkpoint/$DATE"
+          echo "### Checkpoint created" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Tag:** \`refs/tags/$TAG\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Branch:** \`refs/heads/$TAG\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Commit:** \`$(git rev-parse HEAD)\`" >> "$GITHUB_STEP_SUMMARY"

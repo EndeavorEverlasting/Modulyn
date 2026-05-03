@@ -12,6 +12,18 @@ Both a **tag** and a **branch** are created with the same name.
 
 ## How to Create a Checkpoint
 
+### Automated (recommended)
+
+Trigger the **Create Checkpoint** GitHub Actions workflow from the Actions tab:
+
+1. Go to **Actions → Create Checkpoint → Run workflow**.
+2. Optionally enter a date (`YYYY-MM-DD`). Leave blank to use today's date.
+3. Click **Run workflow**.
+
+The workflow will create and push both the tag and the branch snapshot automatically.
+
+### Manual
+
 Run the following commands, replacing `YYYY-MM-DD` with today's date:
 
 ```bash
