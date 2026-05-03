@@ -48,24 +48,19 @@ export default function DesignStudio() {
 
   const handleRefine = () => {
     if (!refinement.trim()) return;
-    
+
     updateDesign.mutate(
-      { 
-        id: designId, 
-        data: { rawDescription: design?.rawDescription + "\n\nFollow-up: " + refinement } 
+      {
+        id: designId,
+        data: {
+          rawDescription: design?.rawDescription + "\n\nFollow-up: " + refinement,
+        },
       },
       {
         onSuccess: () => {
           setRefinement("");
-          interpretDesign.mutate(
-            { id: designId },
-            {
-              onSuccess: () => {
-                queryClient.invalidateQueries({ queryKey: getGetDesignQueryKey(designId) });
-              }
-            }
-          );
-        }
+          queryClient.invalidateQueries({ queryKey: getGetDesignQueryKey(designId) });
+        },
       }
     );
   };

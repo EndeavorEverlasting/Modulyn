@@ -1,4 +1,4 @@
-import { Component3D } from "@workspace/api-client-react/src/generated/api.schemas";
+import { Component3D } from "@workspace/api-client-react";
 
 interface BlueprintViewerProps {
   components: Component3D[];
