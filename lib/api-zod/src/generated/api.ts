@@ -96,6 +96,70 @@ export const GetDesignResponse = zod.object({
           "Category of the design (e.g. furniture, room, fabricated part)",
         ),
       summary: zod.string().describe("One-sentence summary of the design"),
+      printTimeEstimate: zod
+        .string()
+        .nullish()
+        .describe(
+          'Estimated 3D print time (e.g. \"3–5 hours at 0.2mm \/ 40% infill\"). Only present for 3D-printable items.',
+        ),
+      weightCapacity: zod
+        .string()
+        .nullish()
+        .describe(
+          'Weight or load capacity note (e.g. \"Supports up to 50 lbs in PETG at 40% infill\")',
+        ),
+      installationNotes: zod
+        .string()
+        .nullish()
+        .describe(
+          "How to install or mount the item (e.g. wall anchor type, screw spec, stud vs drywall)",
+        ),
+      designVariants: zod
+        .array(
+          zod
+            .object({
+              name: zod
+                .string()
+                .describe(
+                  'Short name for this variant (e.g. \"L-Hook\", \"J-Hook\")',
+                ),
+              description: zod
+                .string()
+                .describe(
+                  "One-sentence description of what makes this variant different",
+                ),
+              components: zod
+                .array(
+                  zod
+                    .object({
+                      name: zod.string(),
+                      material: zod.string(),
+                      quantity: zod.number(),
+                      width: zod.number().describe("Width in inches"),
+                      height: zod.number().describe("Height in inches"),
+                      depth: zod.number().describe("Depth in inches"),
+                      x: zod
+                        .number()
+                        .describe("X position offset in the 3D scene"),
+                      y: zod
+                        .number()
+                        .describe("Y position offset in the 3D scene"),
+                      z: zod
+                        .number()
+                        .describe("Z position offset in the 3D scene"),
+                      color: zod.string().describe("Hex color for rendering"),
+                      shape: zod
+                        .enum(["box", "cylinder", "sphere"])
+                        .describe("Primitive shape type for 3D rendering"),
+                    })
+                    .describe("A single physical component of the design"),
+                )
+                .describe("Full 3D geometry for this variant"),
+            })
+            .describe("An alternative shape\/style option for the design"),
+        )
+        .optional()
+        .describe("2–3 alternative shape options the user can choose between"),
     })
     .nullish()
     .describe("AI-interpreted structured design data"),
@@ -160,6 +224,70 @@ export const UpdateDesignResponse = zod.object({
           "Category of the design (e.g. furniture, room, fabricated part)",
         ),
       summary: zod.string().describe("One-sentence summary of the design"),
+      printTimeEstimate: zod
+        .string()
+        .nullish()
+        .describe(
+          'Estimated 3D print time (e.g. \"3–5 hours at 0.2mm \/ 40% infill\"). Only present for 3D-printable items.',
+        ),
+      weightCapacity: zod
+        .string()
+        .nullish()
+        .describe(
+          'Weight or load capacity note (e.g. \"Supports up to 50 lbs in PETG at 40% infill\")',
+        ),
+      installationNotes: zod
+        .string()
+        .nullish()
+        .describe(
+          "How to install or mount the item (e.g. wall anchor type, screw spec, stud vs drywall)",
+        ),
+      designVariants: zod
+        .array(
+          zod
+            .object({
+              name: zod
+                .string()
+                .describe(
+                  'Short name for this variant (e.g. \"L-Hook\", \"J-Hook\")',
+                ),
+              description: zod
+                .string()
+                .describe(
+                  "One-sentence description of what makes this variant different",
+                ),
+              components: zod
+                .array(
+                  zod
+                    .object({
+                      name: zod.string(),
+                      material: zod.string(),
+                      quantity: zod.number(),
+                      width: zod.number().describe("Width in inches"),
+                      height: zod.number().describe("Height in inches"),
+                      depth: zod.number().describe("Depth in inches"),
+                      x: zod
+                        .number()
+                        .describe("X position offset in the 3D scene"),
+                      y: zod
+                        .number()
+                        .describe("Y position offset in the 3D scene"),
+                      z: zod
+                        .number()
+                        .describe("Z position offset in the 3D scene"),
+                      color: zod.string().describe("Hex color for rendering"),
+                      shape: zod
+                        .enum(["box", "cylinder", "sphere"])
+                        .describe("Primitive shape type for 3D rendering"),
+                    })
+                    .describe("A single physical component of the design"),
+                )
+                .describe("Full 3D geometry for this variant"),
+            })
+            .describe("An alternative shape\/style option for the design"),
+        )
+        .optional()
+        .describe("2–3 alternative shape options the user can choose between"),
     })
     .nullish()
     .describe("AI-interpreted structured design data"),
@@ -224,6 +352,70 @@ export const InterpretDesignResponse = zod.object({
           "Category of the design (e.g. furniture, room, fabricated part)",
         ),
       summary: zod.string().describe("One-sentence summary of the design"),
+      printTimeEstimate: zod
+        .string()
+        .nullish()
+        .describe(
+          'Estimated 3D print time (e.g. \"3–5 hours at 0.2mm \/ 40% infill\"). Only present for 3D-printable items.',
+        ),
+      weightCapacity: zod
+        .string()
+        .nullish()
+        .describe(
+          'Weight or load capacity note (e.g. \"Supports up to 50 lbs in PETG at 40% infill\")',
+        ),
+      installationNotes: zod
+        .string()
+        .nullish()
+        .describe(
+          "How to install or mount the item (e.g. wall anchor type, screw spec, stud vs drywall)",
+        ),
+      designVariants: zod
+        .array(
+          zod
+            .object({
+              name: zod
+                .string()
+                .describe(
+                  'Short name for this variant (e.g. \"L-Hook\", \"J-Hook\")',
+                ),
+              description: zod
+                .string()
+                .describe(
+                  "One-sentence description of what makes this variant different",
+                ),
+              components: zod
+                .array(
+                  zod
+                    .object({
+                      name: zod.string(),
+                      material: zod.string(),
+                      quantity: zod.number(),
+                      width: zod.number().describe("Width in inches"),
+                      height: zod.number().describe("Height in inches"),
+                      depth: zod.number().describe("Depth in inches"),
+                      x: zod
+                        .number()
+                        .describe("X position offset in the 3D scene"),
+                      y: zod
+                        .number()
+                        .describe("Y position offset in the 3D scene"),
+                      z: zod
+                        .number()
+                        .describe("Z position offset in the 3D scene"),
+                      color: zod.string().describe("Hex color for rendering"),
+                      shape: zod
+                        .enum(["box", "cylinder", "sphere"])
+                        .describe("Primitive shape type for 3D rendering"),
+                    })
+                    .describe("A single physical component of the design"),
+                )
+                .describe("Full 3D geometry for this variant"),
+            })
+            .describe("An alternative shape\/style option for the design"),
+        )
+        .optional()
+        .describe("2–3 alternative shape options the user can choose between"),
     })
     .nullish()
     .describe("AI-interpreted structured design data"),

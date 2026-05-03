@@ -46,6 +46,18 @@ export interface Component3D {
   shape: Component3DShape;
 }
 
+/**
+ * An alternative shape/style option for the design
+ */
+export interface DesignVariant {
+  /** Short name for this variant (e.g. "L-Hook", "J-Hook") */
+  name: string;
+  /** One-sentence description of what makes this variant different */
+  description: string;
+  /** Full 3D geometry for this variant */
+  components: Component3D[];
+}
+
 export type StructuredDataUnit =
   (typeof StructuredDataUnit)[keyof typeof StructuredDataUnit];
 
@@ -72,6 +84,14 @@ export interface StructuredData {
   designType: string;
   /** One-sentence summary of the design */
   summary: string;
+  /** Estimated 3D print time (e.g. "3–5 hours at 0.2mm / 40% infill"). Only present for 3D-printable items. */
+  printTimeEstimate?: string | null;
+  /** Weight or load capacity note (e.g. "Supports up to 50 lbs in PETG at 40% infill") */
+  weightCapacity?: string | null;
+  /** How to install or mount the item (e.g. wall anchor type, screw spec, stud vs drywall) */
+  installationNotes?: string | null;
+  /** 2–3 alternative shape options the user can choose between */
+  designVariants?: DesignVariant[];
 }
 
 export type DesignStatus = (typeof DesignStatus)[keyof typeof DesignStatus];

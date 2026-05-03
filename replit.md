@@ -84,10 +84,21 @@ designsTable:
 {
   overallWidth, overallHeight, overallDepth, unit,
   designType, summary, estimatedCost?,
-  components: Component3D[],  // { name, material, quantity, width, height, depth, x, y, z, color, shape }
-  buildInstructions: string[]
+  printTimeEstimate?: string | null,    // 3D-printable items only, e.g. "3–5 hours at 0.2mm/40% infill"
+  weightCapacity?: string | null,       // load-bearing items only, e.g. "Rated for 50 lbs with PETG at 40% infill"
+  installationNotes?: string | null,    // wall/ceiling-mounted items: anchor type, screw spec, stud vs drywall
+  components: Component3D[],            // { name, material, quantity, width, height, depth, x, y, z, color, shape }
+  buildInstructions: string[],
+  designVariants?: DesignVariant[]      // 2–3 shape alternatives, each with name, description, components[]
 }
 ```
+
+## Design Studio UI (artifacts/app/src/pages/design-studio.tsx)
+
+- **Left panel**: design name, status, type badge; stats grid (material cost, print time, load capacity); original spec; refine textarea
+- **Center panel**: Three.js 3D viewer with OrbitControls; variant selector strip at top (switches active 3D model); "Drag to rotate" badge
+- **Right panel tabs**: Cut List (parts table for active variant), Blueprint (SVG orthographic), Instructions (installation notes callout + build steps), Variants (selectable cards — clicking switches 3D view + cut list)
+- Variant index 0 always shows primary components; variants 1+ pull from `designVariants[index-1].components`
 
 ## Key Commands
 

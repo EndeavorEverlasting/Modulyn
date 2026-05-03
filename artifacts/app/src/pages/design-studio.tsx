@@ -7,6 +7,7 @@ import {
   useDeleteDesign,
   getGetDesignQueryKey 
 } from "@workspace/api-client-react";
+import type { Component3D } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/layout";
 import { ThreeViewer } from "@/components/3d-viewer";
@@ -19,7 +20,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, ArrowRight, Play, Trash2, PenTool } from "lucide-react";
+import { Loader2, ArrowRight, Play, Trash2, PenTool, Clock, Weight, Wrench, Layers } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -31,6 +32,7 @@ export default function DesignStudio() {
   const queryClient = useQueryClient();
   
   const [refinement, setRefinement] = useState("");
+  const [selectedVariantIndex, setSelectedVariantIndex] = useState<number>(0);
 
   const { data: design, isLoading, error } = useGetDesign(designId, {
     query: {
@@ -59,6 +61,7 @@ export default function DesignStudio() {
       {
         onSuccess: () => {
           setRefinement("");
+          setSelectedVariantIndex(0);
           queryClient.invalidateQueries({ queryKey: getGetDesignQueryKey(designId) });
         },
       }
@@ -70,6 +73,7 @@ export default function DesignStudio() {
       { id: designId },
       {
         onSuccess: () => {
+          setSelectedVariantIndex(0);
           queryClient.invalidateQueries({ queryKey: getGetDesignQueryKey(designId) });
         }
       }
@@ -115,6 +119,20 @@ export default function DesignStudio() {
   const isInterpreting = design.status === "interpreting";
   const sd = design.structuredData;
 
+  // Derive which components to show in the 3D viewer based on selected variant
+  const variants = sd?.designVariants ?? [];
+  const activeComponents: Component3D[] = (() => {
+    if (!sd?.components) return [];
+    if (variants.length > 0 && selectedVariantIndex > 0) {
+      const v = variants[selectedVariantIndex - 1];
+      return v?.components ?? sd.components;
+    }
+    return sd.components;
+  })();
+
+  // Tab label for variants
+  const hasVariants = variants.length > 0;
+
   return (
     <Layout>
       <div className="flex h-full w-full overflow-hidden bg-[#050505]">
@@ -129,14 +147,34 @@ export default function DesignStudio() {
               </Badge>
               {sd?.designType && <span className="font-mono text-xs text-muted-foreground uppercase">{sd.designType}</span>}
             </div>
-            {sd?.estimatedCost && (
-              <div className="mt-4 pt-4 border-t border-border/50">
-                <span className="font-mono text-xs text-muted-foreground uppercase block mb-1">Est. Material Cost</span>
-                <span className="font-mono text-lg text-foreground">{sd.estimatedCost}</span>
-              </div>
-            )}
+
+            {/* Stats grid */}
+            <div className="mt-3 grid grid-cols-1 gap-2">
+              {sd?.estimatedCost && (
+                <div className="bg-black/40 border border-border/40 p-2">
+                  <span className="font-mono text-[10px] text-muted-foreground uppercase block mb-0.5">Est. Material Cost</span>
+                  <span className="font-mono text-sm text-foreground">{sd.estimatedCost}</span>
+                </div>
+              )}
+              {sd?.printTimeEstimate && (
+                <div className="bg-black/40 border border-primary/20 p-2">
+                  <span className="font-mono text-[10px] text-primary/70 uppercase flex items-center gap-1 mb-0.5">
+                    <Clock className="w-3 h-3" /> Print Time
+                  </span>
+                  <span className="font-mono text-sm text-foreground">{sd.printTimeEstimate}</span>
+                </div>
+              )}
+              {sd?.weightCapacity && (
+                <div className="bg-black/40 border border-amber-500/20 p-2">
+                  <span className="font-mono text-[10px] text-amber-500/70 uppercase flex items-center gap-1 mb-0.5">
+                    <Weight className="w-3 h-3" /> Load Capacity
+                  </span>
+                  <span className="font-mono text-sm text-foreground">{sd.weightCapacity}</span>
+                </div>
+              )}
+            </div>
             
-            <div className="mt-4 flex gap-2">
+            <div className="mt-3 flex gap-2">
               {design.status === "error" && (
                 <Button size="sm" variant="outline" className="w-full rounded-none font-mono text-xs" onClick={handleReinterpret} disabled={interpretDesign.isPending}>
                   <Play className="w-3 h-3 mr-2" /> Retry
@@ -198,9 +236,39 @@ export default function DesignStudio() {
 
         {/* CENTER PANEL - 3D Viewer */}
         <div className="flex-1 relative border-r border-border flex flex-col bg-black">
-          <div className="absolute top-4 left-4 z-10">
+          {/* Variant selector strip */}
+          {hasVariants && sd && (
+            <div className="absolute top-0 left-0 right-0 z-10 flex gap-1 p-2 bg-black/70 backdrop-blur border-b border-border/40">
+              {/* Primary variant (top-level components) */}
+              <button
+                onClick={() => setSelectedVariantIndex(0)}
+                className={`flex-1 px-2 py-1.5 font-mono text-[10px] uppercase tracking-wide border transition-colors ${
+                  selectedVariantIndex === 0
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border/40 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                }`}
+              >
+                {variants[0]?.name ?? "Primary"}
+              </button>
+              {variants.slice(1).map((v, i) => (
+                <button
+                  key={i + 1}
+                  onClick={() => setSelectedVariantIndex(i + 1)}
+                  className={`flex-1 px-2 py-1.5 font-mono text-[10px] uppercase tracking-wide border transition-colors ${
+                    selectedVariantIndex === i + 1
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border/40 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                  }`}
+                >
+                  {v.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className={`absolute z-10 ${hasVariants ? "top-12" : "top-4"} left-4`}>
             <Badge variant="outline" className="bg-black/80 backdrop-blur text-primary border-primary rounded-none font-mono uppercase">
-              3D Render
+              3D Render · Drag to rotate
             </Badge>
           </div>
           
@@ -211,8 +279,8 @@ export default function DesignStudio() {
             </div>
           )}
 
-          {sd?.components ? (
-             <ThreeViewer components={sd.components} />
+          {activeComponents.length > 0 ? (
+             <ThreeViewer components={activeComponents} />
           ) : !isInterpreting ? (
             <div className="flex items-center justify-center h-full text-muted-foreground font-mono">
               No geometry data available.
@@ -227,6 +295,11 @@ export default function DesignStudio() {
               <TabsTrigger value="materials" className="rounded-none font-mono uppercase data-[state=active]:bg-[#0a0a0a] data-[state=active]:text-primary h-full px-4" data-testid="tab-materials">Cut List</TabsTrigger>
               <TabsTrigger value="blueprint" className="rounded-none font-mono uppercase data-[state=active]:bg-[#0a0a0a] data-[state=active]:text-primary h-full px-4" data-testid="tab-blueprint">Blueprint</TabsTrigger>
               <TabsTrigger value="build" className="rounded-none font-mono uppercase data-[state=active]:bg-[#0a0a0a] data-[state=active]:text-primary h-full px-4" data-testid="tab-build">Instructions</TabsTrigger>
+              {hasVariants && (
+                <TabsTrigger value="variants" className="rounded-none font-mono uppercase data-[state=active]:bg-[#0a0a0a] data-[state=active]:text-primary h-full px-4" data-testid="tab-variants">
+                  <Layers className="w-3 h-3 mr-1.5" />Variants
+                </TabsTrigger>
+              )}
             </TabsList>
             
             <div className="flex-1 overflow-hidden relative">
@@ -236,6 +309,7 @@ export default function DesignStudio() {
                 </div>
               )}
               
+              {/* CUT LIST TAB */}
               <TabsContent value="materials" className="m-0 h-full p-0 data-[state=active]:flex flex-col">
                 <ScrollArea className="flex-1">
                   <div className="p-4">
@@ -249,7 +323,7 @@ export default function DesignStudio() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {sd?.components.map((c, i) => (
+                        {activeComponents.map((c, i) => (
                           <TableRow key={i} className="border-border/50 hover:bg-black/50">
                             <TableCell className="font-mono text-sm py-3 text-foreground">{c.name}</TableCell>
                             <TableCell className="font-mono text-xs text-muted-foreground">{c.material}</TableCell>
@@ -257,7 +331,7 @@ export default function DesignStudio() {
                             <TableCell className="font-mono text-sm text-right font-bold text-primary">{c.quantity}</TableCell>
                           </TableRow>
                         ))}
-                        {!sd?.components?.length && (
+                        {!activeComponents.length && (
                           <TableRow>
                             <TableCell colSpan={4} className="text-center font-mono text-muted-foreground py-8">No cut list generated.</TableCell>
                           </TableRow>
@@ -266,20 +340,21 @@ export default function DesignStudio() {
                     </Table>
                   </div>
                 </ScrollArea>
-                {sd?.components && (
+                {activeComponents.length > 0 && (
                   <div className="p-4 border-t border-border bg-[#050505] flex justify-between items-center">
                     <span className="font-mono text-xs uppercase text-muted-foreground">Total Parts</span>
                     <span className="font-mono font-bold text-primary text-lg">
-                      {sd.components.reduce((acc, c) => acc + c.quantity, 0)}
+                      {activeComponents.reduce((acc, c) => acc + c.quantity, 0)}
                     </span>
                   </div>
                 )}
               </TabsContent>
               
+              {/* BLUEPRINT TAB */}
               <TabsContent value="blueprint" className="m-0 h-full data-[state=active]:flex flex-col">
-                {sd?.components ? (
+                {activeComponents.length > 0 && sd ? (
                   <BlueprintViewer
-                    components={sd.components}
+                    components={activeComponents}
                     overallWidth={sd.overallWidth}
                     overallHeight={sd.overallHeight}
                     overallDepth={sd.overallDepth}
@@ -290,25 +365,122 @@ export default function DesignStudio() {
                 )}
               </TabsContent>
               
+              {/* INSTRUCTIONS TAB */}
               <TabsContent value="build" className="m-0 h-full data-[state=active]:flex flex-col">
                 <ScrollArea className="flex-1">
                   <div className="p-6 space-y-6">
-                    {sd?.buildInstructions?.map((step, i) => (
-                      <div key={i} className="flex gap-4">
-                        <div className="flex-shrink-0 w-8 h-8 bg-[#111] border border-primary/30 flex items-center justify-center font-mono text-primary font-bold">
-                          {i + 1}
-                        </div>
-                        <div className="font-mono text-sm text-foreground leading-relaxed pt-1">
-                          {step}
+                    {/* Installation Notes — shown first if present */}
+                    {sd?.installationNotes && (
+                      <div className="border border-amber-500/30 bg-amber-500/5 p-4">
+                        <h4 className="font-mono text-xs text-amber-400 uppercase flex items-center gap-2 mb-3">
+                          <Wrench className="w-3.5 h-3.5" /> Installation
+                        </h4>
+                        <p className="font-mono text-sm text-foreground/90 leading-relaxed">
+                          {sd.installationNotes}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Build Steps */}
+                    {sd?.buildInstructions && sd.buildInstructions.length > 0 && (
+                      <div>
+                        <h4 className="font-mono text-xs text-muted-foreground uppercase mb-4">Build Steps</h4>
+                        <div className="space-y-4">
+                          {sd.buildInstructions.map((step, i) => (
+                            <div key={i} className="flex gap-4">
+                              <div className="flex-shrink-0 w-8 h-8 bg-[#111] border border-primary/30 flex items-center justify-center font-mono text-primary font-bold">
+                                {i + 1}
+                              </div>
+                              <div className="font-mono text-sm text-foreground leading-relaxed pt-1">
+                                {step}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    ))}
+                    )}
+
                     {!sd?.buildInstructions?.length && (
                       <div className="text-center font-mono text-muted-foreground py-8">No build instructions generated.</div>
                     )}
                   </div>
                 </ScrollArea>
               </TabsContent>
+
+              {/* VARIANTS TAB */}
+              {hasVariants && (
+                <TabsContent value="variants" className="m-0 h-full data-[state=active]:flex flex-col">
+                  <ScrollArea className="flex-1">
+                    <div className="p-4 space-y-3">
+                      <p className="font-mono text-xs text-muted-foreground uppercase mb-4">
+                        Select a shape variant to preview it in the 3D viewer
+                      </p>
+
+                      {/* Primary (variant index 0) */}
+                      {variants[0] && (
+                        <button
+                          onClick={() => setSelectedVariantIndex(0)}
+                          className={`w-full text-left p-4 border transition-colors ${
+                            selectedVariantIndex === 0
+                              ? "border-primary bg-primary/5"
+                              : "border-border/40 hover:border-primary/30 hover:bg-black/30"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <span className="font-mono text-sm font-bold text-foreground block">{variants[0].name}</span>
+                              <span className="font-mono text-xs text-muted-foreground mt-1 block leading-relaxed">{variants[0].description}</span>
+                            </div>
+                            <div className="flex-shrink-0">
+                              {selectedVariantIndex === 0 ? (
+                                <Badge className="rounded-none font-mono text-[10px] uppercase">Active</Badge>
+                              ) : (
+                                <Badge variant="outline" className="rounded-none font-mono text-[10px] uppercase text-muted-foreground">Select</Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="mt-2 font-mono text-[10px] text-muted-foreground/60">
+                            {variants[0].components?.length ?? 0} parts
+                          </div>
+                        </button>
+                      )}
+
+                      {/* Additional variants */}
+                      {variants.slice(1).map((v, i) => {
+                        const idx = i + 1;
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => setSelectedVariantIndex(idx)}
+                            className={`w-full text-left p-4 border transition-colors ${
+                              selectedVariantIndex === idx
+                                ? "border-primary bg-primary/5"
+                                : "border-border/40 hover:border-primary/30 hover:bg-black/30"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <span className="font-mono text-sm font-bold text-foreground block">{v.name}</span>
+                                <span className="font-mono text-xs text-muted-foreground mt-1 block leading-relaxed">{v.description}</span>
+                              </div>
+                              <div className="flex-shrink-0">
+                                {selectedVariantIndex === idx ? (
+                                  <Badge className="rounded-none font-mono text-[10px] uppercase">Active</Badge>
+                                ) : (
+                                  <Badge variant="outline" className="rounded-none font-mono text-[10px] uppercase text-muted-foreground">Select</Badge>
+                                )}
+                              </div>
+                            </div>
+                            <div className="mt-2 font-mono text-[10px] text-muted-foreground/60">
+                              {v.components?.length ?? 0} parts
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
+              )}
             </div>
           </Tabs>
         </div>
