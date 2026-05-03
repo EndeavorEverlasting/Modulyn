@@ -37,123 +37,116 @@ function IsometricViewer({ components }: { components: Component3D[] }) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
 
-    const W = canvas.width = canvas.offsetWidth;
-    const H = canvas.height = canvas.offsetHeight;
-    ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = "#0a0a0a";
-    ctx.fillRect(0, 0, W, H);
+    const draw = () => {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
-    const SCALE = 0.55;
-    const ISO_X = 0.866; // cos(30deg)
-    const ISO_Y = 0.5;   // sin(30deg)
-    const cx = W / 2;
-    const cy = H * 0.55;
+      const W = (canvas.width = canvas.offsetWidth || 400);
+      const H = (canvas.height = canvas.offsetHeight || 300);
 
-    // project 3d world → isometric 2d
-    const project = (x: number, y: number, z: number) => ({
-      px: cx + (x - z) * ISO_X * SCALE,
-      py: cy + (x + z) * ISO_Y * SCALE - y * SCALE,
-    });
+      ctx.fillStyle = "#0a0a0a";
+      ctx.fillRect(0, 0, W, H);
 
-    // draw grid
-    ctx.strokeStyle = "#1e1e1e";
-    ctx.lineWidth = 0.5;
-    for (let i = -80; i <= 80; i += 10) {
-      const a = project(i, 0, -80);
-      const b = project(i, 0, 80);
-      const c = project(-80, 0, i);
-      const d = project(80, 0, i);
-      ctx.beginPath(); ctx.moveTo(a.px, a.py); ctx.lineTo(b.px, b.py); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(c.px, c.py); ctx.lineTo(d.px, d.py); ctx.stroke();
-    }
+      const SCALE = 0.55;
+      const ISO_X = 0.866;
+      const ISO_Y = 0.5;
+      const cx = W / 2;
+      const cy = H * 0.55;
 
-    if (components.length === 0) {
-      ctx.fillStyle = "#333";
-      ctx.font = "13px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("NO COMPONENTS", cx, cy);
-      return;
-    }
+      const project = (x: number, y: number, z: number) => ({
+        px: cx + (x - z) * ISO_X * SCALE,
+        py: cy + (x + z) * ISO_Y * SCALE - y * SCALE,
+      });
 
-    // Expand components by quantity — each entry becomes N positioned instances
-    const expanded: Component3D[] = [];
-    components.forEach((comp) => {
-      const qty = Math.max(1, comp.quantity || 1);
-      for (let i = 0; i < qty; i++) {
-        const spacing = (comp.width + 2);
-        expanded.push({
-          ...comp,
-          x: comp.x + (i - Math.floor(qty / 2)) * spacing,
-          quantity: 1,
-        });
+      ctx.strokeStyle = "#1e1e1e";
+      ctx.lineWidth = 0.5;
+      for (let i = -80; i <= 80; i += 10) {
+        const a = project(i, 0, -80);
+        const b = project(i, 0, 80);
+        const c = project(-80, 0, i);
+        const d = project(80, 0, i);
+        ctx.beginPath(); ctx.moveTo(a.px, a.py); ctx.lineTo(b.px, b.py); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(c.px, c.py); ctx.lineTo(d.px, d.py); ctx.stroke();
       }
-    });
 
-    // sort back-to-front for painter's algorithm
-    const sorted = expanded.sort((a, b) => (a.x + a.z) - (b.x + b.z));
+      if (components.length === 0) {
+        ctx.fillStyle = "#333";
+        ctx.font = "13px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("NO COMPONENTS", cx, cy);
+        return;
+      }
 
-    sorted.forEach((comp) => {
-      const baseColor = comp.color || "#eab308";
-      const { x, y, z } = comp;
-      const hw = comp.width / 2;
-      const hh = comp.height / 2;
-      const hd = comp.depth / 2;
+      const expanded: Component3D[] = [];
+      components.forEach((comp) => {
+        const qty = Math.max(1, comp.quantity || 1);
+        for (let i = 0; i < qty; i++) {
+          expanded.push({
+            ...comp,
+            x: comp.x + (i - Math.floor(qty / 2)) * (comp.width + 2),
+            quantity: 1,
+          });
+        }
+      });
 
-      // hex color → rgb components for shading
-      const hex = baseColor.replace("#", "");
-      const r = parseInt(hex.slice(0, 2), 16);
-      const g = parseInt(hex.slice(2, 4), 16);
-      const b = parseInt(hex.slice(4, 6), 16);
+      const sorted = expanded.sort((a, b) => (a.x + a.z) - (b.x + b.z));
 
-      const shade = (factor: number) =>
-        `rgb(${Math.round(r * factor)},${Math.round(g * factor)},${Math.round(b * factor)})`;
+      sorted.forEach((comp) => {
+        const baseColor = comp.color || "#eab308";
+        const { x, y, z } = comp;
+        const hw = comp.width / 2;
+        const hh = comp.height / 2;
+        const hd = comp.depth / 2;
 
-      // 8 corners
-      const tbl = project(x - hw, y + hh, z - hd);
-      const tbr = project(x + hw, y + hh, z - hd);
-      const tfl = project(x - hw, y + hh, z + hd);
-      const tfr = project(x + hw, y + hh, z + hd);
-      const bbl = project(x - hw, y - hh, z - hd);
-      const bbr = project(x + hw, y - hh, z - hd);
-      const bfl = project(x - hw, y - hh, z + hd);
-      const bfr = project(x + hw, y - hh, z + hd);
+        const hex = baseColor.replace("#", "");
+        const r = parseInt(hex.slice(0, 2), 16);
+        const g = parseInt(hex.slice(2, 4), 16);
+        const b = parseInt(hex.slice(4, 6), 16);
+        const shade = (f: number) =>
+          `rgb(${Math.round(r * f)},${Math.round(g * f)},${Math.round(b * f)})`;
 
-      const drawFace = (pts: Array<{ px: number; py: number }>, color: string) => {
-        ctx.beginPath();
-        ctx.moveTo(pts[0].px, pts[0].py);
-        pts.slice(1).forEach((p) => ctx.lineTo(p.px, p.py));
-        ctx.closePath();
-        ctx.fillStyle = color;
-        ctx.fill();
-        ctx.strokeStyle = "rgba(255,255,255,0.12)";
-        ctx.lineWidth = 0.8;
-        ctx.stroke();
-      };
+        const tbl = project(x - hw, y + hh, z - hd);
+        const tbr = project(x + hw, y + hh, z - hd);
+        const tfl = project(x - hw, y + hh, z + hd);
+        const tfr = project(x + hw, y + hh, z + hd);
+        const bfl = project(x - hw, y - hh, z + hd);
+        const bfr = project(x + hw, y - hh, z + hd);
+        const bbr = project(x + hw, y - hh, z - hd);
 
-      // top face (lightest)
-      drawFace([tbl, tbr, tfr, tfl], shade(1.0));
-      // left face
-      drawFace([tfl, tfr, bfr, bfl], shade(0.65));
-      // right face
-      drawFace([tbr, tfr, bfr, bbr], shade(0.45));
-    });
+        const drawFace = (pts: Array<{ px: number; py: number }>, color: string) => {
+          ctx.beginPath();
+          ctx.moveTo(pts[0].px, pts[0].py);
+          pts.slice(1).forEach((p) => ctx.lineTo(p.px, p.py));
+          ctx.closePath();
+          ctx.fillStyle = color;
+          ctx.fill();
+          ctx.strokeStyle = "rgba(255,255,255,0.12)";
+          ctx.lineWidth = 0.8;
+          ctx.stroke();
+        };
 
-    // axis labels
-    ctx.fillStyle = "#555";
-    ctx.font = "10px monospace";
-    ctx.textAlign = "center";
-    const xLabel = project(85, 0, 0);
-    const zLabel = project(0, 0, 85);
-    ctx.fillText("X", xLabel.px, xLabel.py);
-    ctx.fillText("Z", zLabel.px, zLabel.py);
+        drawFace([tbl, tbr, tfr, tfl], shade(1.0));
+        drawFace([tfl, tfr, bfr, bfl], shade(0.65));
+        drawFace([tbr, tfr, bfr, bbr], shade(0.45));
+      });
+
+      ctx.fillStyle = "#555";
+      ctx.font = "10px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("X", project(85, 0, 0).px, project(85, 0, 0).py);
+      ctx.fillText("Z", project(0, 0, 85).px, project(0, 0, 85).py);
+    };
+
+    draw();
+    const ro = new ResizeObserver(() => draw());
+    ro.observe(canvas);
+    return () => ro.disconnect();
   }, [components]);
 
   return (
     <div className="w-full h-full relative" data-testid="3d-viewer-iso">
-      <canvas ref={canvasRef} className="w-full h-full" style={{ minHeight: "300px" }} />
+      <canvas ref={canvasRef} className="w-full h-full block" style={{ minHeight: "300px" }} />
       <div className="absolute bottom-2 right-3 text-[10px] font-mono text-zinc-600 uppercase tracking-widest">
         Isometric View
       </div>
