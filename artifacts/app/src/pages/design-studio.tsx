@@ -1,11 +1,12 @@
 import { useParams, useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   useGetDesign,
   useUpdateDesign,
   useInterpretDesign,
   useDeleteDesign,
   getGetDesignQueryKey,
+  getListDesignsQueryKey,
 } from "@workspace/api-client-react";
 import type { Component3D } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -68,6 +69,12 @@ export default function DesignStudio() {
   const [selectedVariantIndex, setSelectedVariantIndex] = useState<number>(0);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("model");
   const [specExpanded, setSpecExpanded] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameInputValue, setNameInputValue] = useState("");
+  const mobileNameInputRef = useRef<HTMLInputElement>(null);
+  const desktopNameInputRef = useRef<HTMLInputElement>(null);
+  const skipSaveRef = useRef(false);
+  const enterPressedRef = useRef(false);
 
   const { data: design, isLoading, error } = useGetDesign(designId, {
     query: {
@@ -129,6 +136,67 @@ export default function DesignStudio() {
         },
       }
     );
+  };
+
+  const handleNameClick = () => {
+    setNameInputValue(design?.name ?? "");
+    setIsEditingName(true);
+  };
+
+  useEffect(() => {
+    if (isEditingName) {
+      const ref = window.innerWidth >= 1024 ? desktopNameInputRef : mobileNameInputRef;
+      ref.current?.focus();
+      ref.current?.select();
+    }
+  }, [isEditingName]);
+
+  const handleNameSave = () => {
+    if (skipSaveRef.current) {
+      skipSaveRef.current = false;
+      return;
+    }
+    const trimmed = nameInputValue.trim();
+    if (!trimmed || trimmed === design?.name) {
+      setIsEditingName(false);
+      return;
+    }
+    queryClient.setQueryData(getGetDesignQueryKey(designId), (old: typeof design) =>
+      old ? { ...old, name: trimmed } : old
+    );
+    setIsEditingName(false);
+    updateDesign.mutate(
+      { id: designId, data: { name: trimmed } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListDesignsQueryKey() });
+        },
+        onError: () => {
+          queryClient.invalidateQueries({ queryKey: getGetDesignQueryKey(designId) });
+          queryClient.invalidateQueries({ queryKey: getListDesignsQueryKey() });
+          toast({ title: "Failed to rename design", variant: "destructive" });
+        },
+      }
+    );
+  };
+
+  const handleNameBlur = () => {
+    if (enterPressedRef.current) {
+      enterPressedRef.current = false;
+      return;
+    }
+    handleNameSave();
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      enterPressedRef.current = true;
+      handleNameSave();
+    }
+    if (e.key === "Escape") {
+      skipSaveRef.current = true;
+      setIsEditingName(false);
+    }
   };
 
   if (isLoading) {
@@ -466,10 +534,27 @@ export default function DesignStudio() {
 
       {/* Design identity strip */}
       <div className="border-b border-border bg-[#0a0a0a] px-4 py-3 flex items-center justify-between">
-        <div className="min-w-0">
-          <h2 className="font-mono text-base font-bold text-primary uppercase tracking-tight truncate">
-            {design.name}
-          </h2>
+        <div className="min-w-0 flex-1">
+          {isEditingName ? (
+            <input
+              ref={mobileNameInputRef}
+              value={nameInputValue}
+              onChange={(e) => setNameInputValue(e.target.value)}
+              onBlur={handleNameBlur}
+              onKeyDown={handleNameKeyDown}
+              className="font-mono text-base font-bold text-primary uppercase tracking-tight bg-transparent border-b border-primary outline-none w-full"
+              data-testid="input-design-name-mobile"
+            />
+          ) : (
+            <h2
+              className="font-mono text-base font-bold text-primary uppercase tracking-tight truncate cursor-pointer hover:opacity-70"
+              onClick={handleNameClick}
+              title="Click to rename"
+              data-testid="design-name-header"
+            >
+              {design.name}
+            </h2>
+          )}
           <div className="flex items-center gap-2 mt-0.5">
             <Badge
               variant={
@@ -707,9 +792,26 @@ export default function DesignStudio() {
       {/* LEFT PANEL */}
       <div className="w-[320px] flex-shrink-0 border-r border-border bg-[#0a0a0a] flex flex-col">
         <div className="p-4 border-b border-border">
-          <h2 className="font-mono text-lg font-bold text-primary mb-1 uppercase tracking-tight line-clamp-1">
-            {design.name}
-          </h2>
+          {isEditingName ? (
+            <input
+              ref={desktopNameInputRef}
+              value={nameInputValue}
+              onChange={(e) => setNameInputValue(e.target.value)}
+              onBlur={handleNameBlur}
+              onKeyDown={handleNameKeyDown}
+              className="font-mono text-lg font-bold text-primary uppercase tracking-tight bg-transparent border-b border-primary outline-none w-full mb-1"
+              data-testid="input-design-name"
+            />
+          ) : (
+            <h2
+              className="font-mono text-lg font-bold text-primary mb-1 uppercase tracking-tight line-clamp-1 cursor-pointer hover:opacity-70"
+              onClick={handleNameClick}
+              title="Click to rename"
+              data-testid="design-name-header"
+            >
+              {design.name}
+            </h2>
+          )}
           <div className="flex items-center justify-between mb-2">
             <Badge
               variant={
@@ -915,10 +1017,10 @@ export default function DesignStudio() {
     <Layout>
       <div className="flex-1 overflow-hidden flex flex-col">
         <div className="lg:hidden flex-1 overflow-hidden flex flex-col">
-          <MobileLayout />
+          {MobileLayout()}
         </div>
         <div className="hidden lg:flex flex-1 overflow-hidden">
-          <DesktopLayout />
+          {DesktopLayout()}
         </div>
       </div>
     </Layout>

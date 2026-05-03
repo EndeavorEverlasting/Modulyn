@@ -310,14 +310,23 @@ router.patch("/designs/:id", async (req, res): Promise<void> => {
   if (parsed.data.name) updates.name = parsed.data.name;
   if (parsed.data.rawDescription) updates.rawDescription = parsed.data.rawDescription;
 
+  if (!parsed.data.rawDescription) {
+    const [updated] = await db
+      .update(designsTable)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(designsTable.id, params.data.id))
+      .returning();
+    res.json(UpdateDesignResponse.parse(updated));
+    return;
+  }
+
   await db
     .update(designsTable)
     .set({ ...updates, status: "interpreting", updatedAt: new Date() })
     .where(eq(designsTable.id, params.data.id));
 
   try {
-    const newDescription = parsed.data.rawDescription ?? existing.rawDescription;
-    const structuredData = await interpretDescription(newDescription);
+    const structuredData = await interpretDescription(parsed.data.rawDescription);
     const [updated] = await db
       .update(designsTable)
       .set({ structuredData, status: "ready", updatedAt: new Date() })
