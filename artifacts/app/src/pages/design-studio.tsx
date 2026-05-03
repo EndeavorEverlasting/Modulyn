@@ -589,7 +589,7 @@ export default function DesignStudio() {
                   </Badge>
                 </div>
                 {activeComponents.length > 0 ? (
-                  <ThreeViewer components={activeComponents} />
+                  <ThreeViewer components={activeComponents} designName={design.name} />
                 ) : (
                   <div className="flex items-center justify-center h-full text-muted-foreground font-mono text-sm">
                     No geometry data.
@@ -654,6 +654,7 @@ export default function DesignStudio() {
                     overallHeight={sd.overallHeight}
                     overallDepth={sd.overallDepth}
                     unit={sd.unit}
+                    designName={design.name}
                   />
                 ) : (
                   <div className="p-4 font-mono text-muted-foreground">No blueprints available.</div>
@@ -814,7 +815,7 @@ export default function DesignStudio() {
           </div>
         )}
         {activeComponents.length > 0 ? (
-          <ThreeViewer components={activeComponents} />
+          <ThreeViewer components={activeComponents} designName={design.name} />
         ) : !isInterpreting ? (
           <div className="flex items-center justify-center h-full text-muted-foreground font-mono">
             No geometry data available.
@@ -876,6 +877,7 @@ export default function DesignStudio() {
                   overallHeight={sd.overallHeight}
                   overallDepth={sd.overallDepth}
                   unit={sd.unit}
+                  designName={design.name}
                 />
               ) : (
                 <div className="p-4 font-mono text-muted-foreground">

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { Download } from "lucide-react";
 
 interface Component3D {
   name: string;
@@ -29,9 +30,22 @@ function hasWebGL(): boolean {
   }
 }
 
+function triggerDownload(dataUrl: string, filename: string) {
+  const a = document.createElement("a");
+  a.href = dataUrl;
+  a.download = filename;
+  a.click();
+}
+
 // ─── 2D Isometric Fallback ────────────────────────────────────────────────────
 
-function IsometricViewer({ components }: { components: Component3D[] }) {
+function IsometricViewer({
+  components,
+  designName,
+}: {
+  components: Component3D[];
+  designName?: string;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -144,20 +158,37 @@ function IsometricViewer({ components }: { components: Component3D[] }) {
     return () => ro.disconnect();
   }, [components]);
 
+  const handleDownload = (format: "png" | "jpeg") => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const mimeType = format === "jpeg" ? "image/jpeg" : "image/png";
+    const dataUrl = canvas.toDataURL(mimeType, 0.95);
+    const name = designName ? designName.toLowerCase().replace(/\s+/g, "-") : "model";
+    triggerDownload(dataUrl, `${name}-3d.${format}`);
+  };
+
   return (
     <div className="w-full h-full relative" data-testid="3d-viewer-iso">
       <canvas ref={canvasRef} className="w-full h-full block" style={{ minHeight: "300px" }} />
       <div className="absolute bottom-2 right-3 text-[10px] font-mono text-zinc-600 uppercase tracking-widest">
         Isometric View
       </div>
+      <ExportMenu onDownload={handleDownload} />
     </div>
   );
 }
 
 // ─── WebGL Viewer ─────────────────────────────────────────────────────────────
 
-function WebGLViewer({ components }: { components: Component3D[] }) {
+function WebGLViewer({
+  components,
+  designName,
+}: {
+  components: Component3D[];
+  designName?: string;
+}) {
   const mountRef = useRef<HTMLDivElement>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -174,11 +205,15 @@ function WebGLViewer({ components }: { components: Component3D[] }) {
     camera.position.set(80, 60, 80);
     camera.lookAt(0, 0, 0);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      preserveDrawingBuffer: true,
+    });
     renderer.setSize(width, height);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.shadowMap.enabled = true;
     mount.appendChild(renderer.domElement);
+    rendererRef.current = renderer;
 
     const ambient = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambient);
@@ -201,7 +236,6 @@ function WebGLViewer({ components }: { components: Component3D[] }) {
 
     const SCALE = 0.5;
 
-    // Expand components by quantity so every physical part is rendered
     const expanded: Component3D[] = [];
     components.forEach((comp) => {
       const qty = Math.max(1, comp.quantity || 1);
@@ -276,19 +310,78 @@ function WebGLViewer({ components }: { components: Component3D[] }) {
       ro.disconnect();
       controls.dispose();
       renderer.dispose();
-      mount.removeChild(renderer.domElement);
+      rendererRef.current = null;
+      if (mount.contains(renderer.domElement)) {
+        mount.removeChild(renderer.domElement);
+      }
     };
   }, [components]);
 
-  return <div ref={mountRef} className="w-full h-full" data-testid="3d-viewer" style={{ minHeight: "300px" }} />;
+  const handleDownload = (format: "png" | "jpeg") => {
+    const renderer = rendererRef.current;
+    if (!renderer) return;
+    const mimeType = format === "jpeg" ? "image/jpeg" : "image/png";
+    const dataUrl = renderer.domElement.toDataURL(mimeType, 0.95);
+    const name = designName ? designName.toLowerCase().replace(/\s+/g, "-") : "model";
+    triggerDownload(dataUrl, `${name}-3d.${format}`);
+  };
+
+  return (
+    <div ref={mountRef} className="w-full h-full relative" data-testid="3d-viewer" style={{ minHeight: "300px" }}>
+      <ExportMenu onDownload={handleDownload} />
+    </div>
+  );
+}
+
+// ─── Export Menu ──────────────────────────────────────────────────────────────
+
+function ExportMenu({ onDownload }: { onDownload: (format: "png" | "jpeg") => void }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="absolute top-3 right-3 z-20">
+      <div className="relative">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-black/70 backdrop-blur border border-border/60 hover:border-primary/50 text-muted-foreground hover:text-primary transition-colors font-mono text-[10px] uppercase tracking-wide"
+          title="Export image"
+        >
+          <Download className="w-3 h-3" />
+          Export
+        </button>
+        {open && (
+          <div className="absolute right-0 top-full mt-1 bg-[#0a0a0a] border border-border shadow-xl z-30 min-w-[120px]">
+            <button
+              onClick={() => { onDownload("png"); setOpen(false); }}
+              className="w-full text-left px-3 py-2 font-mono text-xs text-foreground hover:bg-primary/10 hover:text-primary transition-colors uppercase tracking-wide"
+            >
+              PNG image
+            </button>
+            <button
+              onClick={() => { onDownload("jpeg"); setOpen(false); }}
+              className="w-full text-left px-3 py-2 font-mono text-xs text-foreground hover:bg-primary/10 hover:text-primary transition-colors uppercase tracking-wide border-t border-border/50"
+            >
+              JPEG image
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ─── Public export ────────────────────────────────────────────────────────────
 
-export function ThreeViewer({ components }: { components: Component3D[] }) {
+export function ThreeViewer({
+  components,
+  designName,
+}: {
+  components: Component3D[];
+  designName?: string;
+}) {
   const [webglSupported] = useState(() => hasWebGL());
   if (!webglSupported) {
-    return <IsometricViewer components={components} />;
+    return <IsometricViewer components={components} designName={designName} />;
   }
-  return <WebGLViewer components={components} />;
+  return <WebGLViewer components={components} designName={designName} />;
 }
