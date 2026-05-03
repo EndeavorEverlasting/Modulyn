@@ -8,3 +8,142 @@
 export interface HealthStatus {
   status: string;
 }
+
+/**
+ * Primitive shape type for 3D rendering
+ */
+export type Component3DShape =
+  (typeof Component3DShape)[keyof typeof Component3DShape];
+
+export const Component3DShape = {
+  box: "box",
+  cylinder: "cylinder",
+  sphere: "sphere",
+} as const;
+
+/**
+ * A single physical component of the design
+ */
+export interface Component3D {
+  name: string;
+  material: string;
+  quantity: number;
+  /** Width in inches */
+  width: number;
+  /** Height in inches */
+  height: number;
+  /** Depth in inches */
+  depth: number;
+  /** X position offset in the 3D scene */
+  x: number;
+  /** Y position offset in the 3D scene */
+  y: number;
+  /** Z position offset in the 3D scene */
+  z: number;
+  /** Hex color for rendering */
+  color: string;
+  /** Primitive shape type for 3D rendering */
+  shape: Component3DShape;
+}
+
+export type StructuredDataUnit =
+  (typeof StructuredDataUnit)[keyof typeof StructuredDataUnit];
+
+export const StructuredDataUnit = {
+  inches: "inches",
+  mm: "mm",
+  cm: "cm",
+  feet: "feet",
+} as const;
+
+/**
+ * AI-interpreted structured design data
+ */
+export interface StructuredData {
+  overallWidth: number;
+  overallHeight: number;
+  overallDepth: number;
+  unit: StructuredDataUnit;
+  components: Component3D[];
+  buildInstructions: string[];
+  /** Rough cost estimate as a human-readable range */
+  estimatedCost?: string;
+  /** Category of the design (e.g. furniture, room, fabricated part) */
+  designType: string;
+  /** One-sentence summary of the design */
+  summary: string;
+}
+
+export type DesignStatus = (typeof DesignStatus)[keyof typeof DesignStatus];
+
+export const DesignStatus = {
+  pending: "pending",
+  interpreting: "interpreting",
+  ready: "ready",
+  error: "error",
+} as const;
+
+export interface Design {
+  id: number;
+  name: string;
+  rawDescription: string;
+  structuredData?: StructuredData | null;
+  status: DesignStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type DesignSummaryStatus =
+  (typeof DesignSummaryStatus)[keyof typeof DesignSummaryStatus];
+
+export const DesignSummaryStatus = {
+  pending: "pending",
+  interpreting: "interpreting",
+  ready: "ready",
+  error: "error",
+} as const;
+
+export interface DesignSummary {
+  id: number;
+  name: string;
+  rawDescription: string;
+  status: DesignSummaryStatus;
+  designType?: string | null;
+  summary?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateDesignBody {
+  /** Name for the design project */
+  name: string;
+  /** The spoken or typed description of what to build */
+  rawDescription: string;
+  /** If true, immediately run AI interpretation after creation */
+  autoInterpret?: boolean;
+}
+
+export interface UpdateDesignBody {
+  name?: string;
+  /** A follow-up or refined description */
+  rawDescription?: string;
+}
+
+export type DesignStatsMaterialBreakdownItem = {
+  material: string;
+  count: number;
+};
+
+export type DesignStatsDesignTypeBreakdownItem = {
+  designType: string;
+  count: number;
+};
+
+export interface DesignStats {
+  total: number;
+  readyCount: number;
+  pendingCount: number;
+  materialBreakdown: DesignStatsMaterialBreakdownItem[];
+  recentDesigns: DesignSummary[];
+  designTypeBreakdown: DesignStatsDesignTypeBreakdownItem[];
+}

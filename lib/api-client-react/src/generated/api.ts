@@ -5,18 +5,28 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  CreateDesignBody,
+  Design,
+  DesignStats,
+  DesignSummary,
+  HealthStatus,
+  UpdateDesignBody,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -92,6 +102,589 @@ export function useHealthCheck<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getHealthCheckQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Returns a list of all saved designs
+ * @summary List all designs
+ */
+export const getListDesignsUrl = () => {
+  return `/api/designs`;
+};
+
+export const listDesigns = async (
+  options?: RequestInit,
+): Promise<DesignSummary[]> => {
+  return customFetch<DesignSummary[]>(getListDesignsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListDesignsQueryKey = () => {
+  return [`/api/designs`] as const;
+};
+
+export const getListDesignsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listDesigns>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listDesigns>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListDesignsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listDesigns>>> = ({
+    signal,
+  }) => listDesigns({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listDesigns>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListDesignsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listDesigns>>
+>;
+export type ListDesignsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all designs
+ */
+
+export function useListDesigns<
+  TData = Awaited<ReturnType<typeof listDesigns>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listDesigns>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListDesignsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Creates a new design from a text description
+ * @summary Create a new design
+ */
+export const getCreateDesignUrl = () => {
+  return `/api/designs`;
+};
+
+export const createDesign = async (
+  createDesignBody: CreateDesignBody,
+  options?: RequestInit,
+): Promise<Design> => {
+  return customFetch<Design>(getCreateDesignUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createDesignBody),
+  });
+};
+
+export const getCreateDesignMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDesign>>,
+    TError,
+    { data: BodyType<CreateDesignBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createDesign>>,
+  TError,
+  { data: BodyType<CreateDesignBody> },
+  TContext
+> => {
+  const mutationKey = ["createDesign"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createDesign>>,
+    { data: BodyType<CreateDesignBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createDesign(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateDesignMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createDesign>>
+>;
+export type CreateDesignMutationBody = BodyType<CreateDesignBody>;
+export type CreateDesignMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a new design
+ */
+export const useCreateDesign = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDesign>>,
+    TError,
+    { data: BodyType<CreateDesignBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createDesign>>,
+  TError,
+  { data: BodyType<CreateDesignBody> },
+  TContext
+> => {
+  return useMutation(getCreateDesignMutationOptions(options));
+};
+
+/**
+ * Fetches a single design by its ID
+ * @summary Get a design by ID
+ */
+export const getGetDesignUrl = (id: number) => {
+  return `/api/designs/${id}`;
+};
+
+export const getDesign = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Design> => {
+  return customFetch<Design>(getGetDesignUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDesignQueryKey = (id: number) => {
+  return [`/api/designs/${id}`] as const;
+};
+
+export const getGetDesignQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDesign>>,
+  TError = ErrorType<void>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getDesign>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDesignQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getDesign>>> = ({
+    signal,
+  }) => getDesign(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getDesign>>, TError, TData> & {
+    queryKey: QueryKey;
+  };
+};
+
+export type GetDesignQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDesign>>
+>;
+export type GetDesignQueryError = ErrorType<void>;
+
+/**
+ * @summary Get a design by ID
+ */
+
+export function useGetDesign<
+  TData = Awaited<ReturnType<typeof getDesign>>,
+  TError = ErrorType<void>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getDesign>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDesignQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Refines an existing design with a follow-up description
+ * @summary Refine a design
+ */
+export const getUpdateDesignUrl = (id: number) => {
+  return `/api/designs/${id}`;
+};
+
+export const updateDesign = async (
+  id: number,
+  updateDesignBody: UpdateDesignBody,
+  options?: RequestInit,
+): Promise<Design> => {
+  return customFetch<Design>(getUpdateDesignUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateDesignBody),
+  });
+};
+
+export const getUpdateDesignMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateDesign>>,
+    TError,
+    { id: number; data: BodyType<UpdateDesignBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateDesign>>,
+  TError,
+  { id: number; data: BodyType<UpdateDesignBody> },
+  TContext
+> => {
+  const mutationKey = ["updateDesign"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateDesign>>,
+    { id: number; data: BodyType<UpdateDesignBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateDesign(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateDesignMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateDesign>>
+>;
+export type UpdateDesignMutationBody = BodyType<UpdateDesignBody>;
+export type UpdateDesignMutationError = ErrorType<void>;
+
+/**
+ * @summary Refine a design
+ */
+export const useUpdateDesign = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateDesign>>,
+    TError,
+    { id: number; data: BodyType<UpdateDesignBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateDesign>>,
+  TError,
+  { id: number; data: BodyType<UpdateDesignBody> },
+  TContext
+> => {
+  return useMutation(getUpdateDesignMutationOptions(options));
+};
+
+/**
+ * Deletes a design by ID
+ * @summary Delete a design
+ */
+export const getDeleteDesignUrl = (id: number) => {
+  return `/api/designs/${id}`;
+};
+
+export const deleteDesign = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteDesignUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteDesignMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteDesign>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteDesign>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteDesign"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteDesign>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteDesign(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteDesignMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteDesign>>
+>;
+
+export type DeleteDesignMutationError = ErrorType<void>;
+
+/**
+ * @summary Delete a design
+ */
+export const useDeleteDesign = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteDesign>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteDesign>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteDesignMutationOptions(options));
+};
+
+/**
+ * Sends the design description to AI and returns structured geometry, materials, and build instructions
+ * @summary Interpret a design description
+ */
+export const getInterpretDesignUrl = (id: number) => {
+  return `/api/designs/${id}/interpret`;
+};
+
+export const interpretDesign = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Design> => {
+  return customFetch<Design>(getInterpretDesignUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getInterpretDesignMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof interpretDesign>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof interpretDesign>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["interpretDesign"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof interpretDesign>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return interpretDesign(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type InterpretDesignMutationResult = NonNullable<
+  Awaited<ReturnType<typeof interpretDesign>>
+>;
+
+export type InterpretDesignMutationError = ErrorType<void>;
+
+/**
+ * @summary Interpret a design description
+ */
+export const useInterpretDesign = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof interpretDesign>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof interpretDesign>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getInterpretDesignMutationOptions(options));
+};
+
+/**
+ * Returns aggregate stats such as total designs, material breakdowns, and recent activity
+ * @summary Get design statistics
+ */
+export const getGetDesignStatsUrl = () => {
+  return `/api/designs/stats`;
+};
+
+export const getDesignStats = async (
+  options?: RequestInit,
+): Promise<DesignStats> => {
+  return customFetch<DesignStats>(getGetDesignStatsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDesignStatsQueryKey = () => {
+  return [`/api/designs/stats`] as const;
+};
+
+export const getGetDesignStatsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDesignStats>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDesignStats>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDesignStatsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getDesignStats>>> = ({
+    signal,
+  }) => getDesignStats({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDesignStats>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDesignStatsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDesignStats>>
+>;
+export type GetDesignStatsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get design statistics
+ */
+
+export function useGetDesignStats<
+  TData = Awaited<ReturnType<typeof getDesignStats>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDesignStats>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDesignStatsQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

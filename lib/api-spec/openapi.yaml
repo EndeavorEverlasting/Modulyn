@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: designs
+    description: Design operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,144 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /designs:
+    get:
+      operationId: listDesigns
+      tags: [designs]
+      summary: List all designs
+      description: Returns a list of all saved designs
+      responses:
+        "200":
+          description: List of designs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DesignSummary"
+
+    post:
+      operationId: createDesign
+      tags: [designs]
+      summary: Create a new design
+      description: Creates a new design from a text description
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDesignBody"
+      responses:
+        "201":
+          description: Design created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Design"
+
+  /designs/{id}:
+    get:
+      operationId: getDesign
+      tags: [designs]
+      summary: Get a design by ID
+      description: Fetches a single design by its ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Design found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Design"
+        "404":
+          description: Design not found
+
+    patch:
+      operationId: updateDesign
+      tags: [designs]
+      summary: Refine a design
+      description: Refines an existing design with a follow-up description
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDesignBody"
+      responses:
+        "200":
+          description: Design updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Design"
+        "404":
+          description: Design not found
+
+    delete:
+      operationId: deleteDesign
+      tags: [designs]
+      summary: Delete a design
+      description: Deletes a design by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Design deleted
+        "404":
+          description: Design not found
+
+  /designs/{id}/interpret:
+    post:
+      operationId: interpretDesign
+      tags: [designs]
+      summary: Interpret a design description
+      description: Sends the design description to AI and returns structured geometry, materials, and build instructions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Interpretation complete
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Design"
+        "404":
+          description: Design not found
+
+  /designs/stats:
+    get:
+      operationId: getDesignStats
+      tags: [designs]
+      summary: Get design statistics
+      description: Returns aggregate stats such as total designs, material breakdowns, and recent activity
+      responses:
+        "200":
+          description: Stats returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DesignStats"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +174,223 @@ components:
       required:
         - status
 
+    Component3D:
+      type: object
+      description: A single physical component of the design
+      properties:
+        name:
+          type: string
+        material:
+          type: string
+        quantity:
+          type: integer
+        width:
+          type: number
+          description: Width in inches
+        height:
+          type: number
+          description: Height in inches
+        depth:
+          type: number
+          description: Depth in inches
+        x:
+          type: number
+          description: X position offset in the 3D scene
+        y:
+          type: number
+          description: Y position offset in the 3D scene
+        z:
+          type: number
+          description: Z position offset in the 3D scene
+        color:
+          type: string
+          description: Hex color for rendering
+        shape:
+          type: string
+          enum: [box, cylinder, sphere]
+          description: Primitive shape type for 3D rendering
+      required:
+        - name
+        - material
+        - quantity
+        - width
+        - height
+        - depth
+        - x
+        - y
+        - z
+        - color
+        - shape
+
+    StructuredData:
+      type: object
+      description: AI-interpreted structured design data
+      properties:
+        overallWidth:
+          type: number
+        overallHeight:
+          type: number
+        overallDepth:
+          type: number
+        unit:
+          type: string
+          enum: [inches, mm, cm, feet]
+        components:
+          type: array
+          items:
+            $ref: "#/components/schemas/Component3D"
+        buildInstructions:
+          type: array
+          items:
+            type: string
+        estimatedCost:
+          type: string
+          description: Rough cost estimate as a human-readable range
+        designType:
+          type: string
+          description: Category of the design (e.g. furniture, room, fabricated part)
+        summary:
+          type: string
+          description: One-sentence summary of the design
+      required:
+        - overallWidth
+        - overallHeight
+        - overallDepth
+        - unit
+        - components
+        - buildInstructions
+        - designType
+        - summary
+
+    Design:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        rawDescription:
+          type: string
+        structuredData:
+          $ref: "#/components/schemas/StructuredData"
+          nullable: true
+        status:
+          type: string
+          enum: [pending, interpreting, ready, error]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - rawDescription
+        - status
+        - createdAt
+        - updatedAt
+
+    DesignSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        rawDescription:
+          type: string
+        status:
+          type: string
+          enum: [pending, interpreting, ready, error]
+        designType:
+          type: string
+          nullable: true
+        summary:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - rawDescription
+        - status
+        - createdAt
+        - updatedAt
+
+    CreateDesignBody:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name for the design project
+        rawDescription:
+          type: string
+          description: The spoken or typed description of what to build
+        autoInterpret:
+          type: boolean
+          description: If true, immediately run AI interpretation after creation
+          default: true
+      required:
+        - name
+        - rawDescription
+
+    UpdateDesignBody:
+      type: object
+      properties:
+        name:
+          type: string
+        rawDescription:
+          type: string
+          description: A follow-up or refined description
+      minProperties: 1
+
+    DesignStats:
+      type: object
+      properties:
+        total:
+          type: integer
+        readyCount:
+          type: integer
+        pendingCount:
+          type: integer
+        materialBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              material:
+                type: string
+              count:
+                type: integer
+            required:
+              - material
+              - count
+        recentDesigns:
+          type: array
+          items:
+            $ref: "#/components/schemas/DesignSummary"
+        designTypeBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              designType:
+                type: string
+              count:
+                type: integer
+            required:
+              - designType
+              - count
+      required:
+        - total
+        - readyCount
+        - pendingCount
+        - materialBreakdown
+        - recentDesigns
+        - designTypeBreakdown

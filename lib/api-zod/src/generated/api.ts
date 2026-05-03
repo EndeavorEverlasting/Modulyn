@@ -14,3 +14,254 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * Returns a list of all saved designs
+ * @summary List all designs
+ */
+export const ListDesignsResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  rawDescription: zod.string(),
+  status: zod.enum(["pending", "interpreting", "ready", "error"]),
+  designType: zod.string().nullish(),
+  summary: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+export const ListDesignsResponse = zod.array(ListDesignsResponseItem);
+
+/**
+ * Creates a new design from a text description
+ * @summary Create a new design
+ */
+export const createDesignBodyAutoInterpretDefault = true;
+
+export const CreateDesignBody = zod.object({
+  name: zod.string().describe("Name for the design project"),
+  rawDescription: zod
+    .string()
+    .describe("The spoken or typed description of what to build"),
+  autoInterpret: zod
+    .boolean()
+    .default(createDesignBodyAutoInterpretDefault)
+    .describe("If true, immediately run AI interpretation after creation"),
+});
+
+/**
+ * Fetches a single design by its ID
+ * @summary Get a design by ID
+ */
+export const GetDesignParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetDesignResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  rawDescription: zod.string(),
+  structuredData: zod
+    .object({
+      overallWidth: zod.number(),
+      overallHeight: zod.number(),
+      overallDepth: zod.number(),
+      unit: zod.enum(["inches", "mm", "cm", "feet"]),
+      components: zod.array(
+        zod
+          .object({
+            name: zod.string(),
+            material: zod.string(),
+            quantity: zod.number(),
+            width: zod.number().describe("Width in inches"),
+            height: zod.number().describe("Height in inches"),
+            depth: zod.number().describe("Depth in inches"),
+            x: zod.number().describe("X position offset in the 3D scene"),
+            y: zod.number().describe("Y position offset in the 3D scene"),
+            z: zod.number().describe("Z position offset in the 3D scene"),
+            color: zod.string().describe("Hex color for rendering"),
+            shape: zod
+              .enum(["box", "cylinder", "sphere"])
+              .describe("Primitive shape type for 3D rendering"),
+          })
+          .describe("A single physical component of the design"),
+      ),
+      buildInstructions: zod.array(zod.string()),
+      estimatedCost: zod
+        .string()
+        .optional()
+        .describe("Rough cost estimate as a human-readable range"),
+      designType: zod
+        .string()
+        .describe(
+          "Category of the design (e.g. furniture, room, fabricated part)",
+        ),
+      summary: zod.string().describe("One-sentence summary of the design"),
+    })
+    .nullish()
+    .describe("AI-interpreted structured design data"),
+  status: zod.enum(["pending", "interpreting", "ready", "error"]),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * Refines an existing design with a follow-up description
+ * @summary Refine a design
+ */
+export const UpdateDesignParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateDesignBody = zod.object({
+  name: zod.string().optional(),
+  rawDescription: zod
+    .string()
+    .optional()
+    .describe("A follow-up or refined description"),
+});
+
+export const UpdateDesignResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  rawDescription: zod.string(),
+  structuredData: zod
+    .object({
+      overallWidth: zod.number(),
+      overallHeight: zod.number(),
+      overallDepth: zod.number(),
+      unit: zod.enum(["inches", "mm", "cm", "feet"]),
+      components: zod.array(
+        zod
+          .object({
+            name: zod.string(),
+            material: zod.string(),
+            quantity: zod.number(),
+            width: zod.number().describe("Width in inches"),
+            height: zod.number().describe("Height in inches"),
+            depth: zod.number().describe("Depth in inches"),
+            x: zod.number().describe("X position offset in the 3D scene"),
+            y: zod.number().describe("Y position offset in the 3D scene"),
+            z: zod.number().describe("Z position offset in the 3D scene"),
+            color: zod.string().describe("Hex color for rendering"),
+            shape: zod
+              .enum(["box", "cylinder", "sphere"])
+              .describe("Primitive shape type for 3D rendering"),
+          })
+          .describe("A single physical component of the design"),
+      ),
+      buildInstructions: zod.array(zod.string()),
+      estimatedCost: zod
+        .string()
+        .optional()
+        .describe("Rough cost estimate as a human-readable range"),
+      designType: zod
+        .string()
+        .describe(
+          "Category of the design (e.g. furniture, room, fabricated part)",
+        ),
+      summary: zod.string().describe("One-sentence summary of the design"),
+    })
+    .nullish()
+    .describe("AI-interpreted structured design data"),
+  status: zod.enum(["pending", "interpreting", "ready", "error"]),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * Deletes a design by ID
+ * @summary Delete a design
+ */
+export const DeleteDesignParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * Sends the design description to AI and returns structured geometry, materials, and build instructions
+ * @summary Interpret a design description
+ */
+export const InterpretDesignParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const InterpretDesignResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  rawDescription: zod.string(),
+  structuredData: zod
+    .object({
+      overallWidth: zod.number(),
+      overallHeight: zod.number(),
+      overallDepth: zod.number(),
+      unit: zod.enum(["inches", "mm", "cm", "feet"]),
+      components: zod.array(
+        zod
+          .object({
+            name: zod.string(),
+            material: zod.string(),
+            quantity: zod.number(),
+            width: zod.number().describe("Width in inches"),
+            height: zod.number().describe("Height in inches"),
+            depth: zod.number().describe("Depth in inches"),
+            x: zod.number().describe("X position offset in the 3D scene"),
+            y: zod.number().describe("Y position offset in the 3D scene"),
+            z: zod.number().describe("Z position offset in the 3D scene"),
+            color: zod.string().describe("Hex color for rendering"),
+            shape: zod
+              .enum(["box", "cylinder", "sphere"])
+              .describe("Primitive shape type for 3D rendering"),
+          })
+          .describe("A single physical component of the design"),
+      ),
+      buildInstructions: zod.array(zod.string()),
+      estimatedCost: zod
+        .string()
+        .optional()
+        .describe("Rough cost estimate as a human-readable range"),
+      designType: zod
+        .string()
+        .describe(
+          "Category of the design (e.g. furniture, room, fabricated part)",
+        ),
+      summary: zod.string().describe("One-sentence summary of the design"),
+    })
+    .nullish()
+    .describe("AI-interpreted structured design data"),
+  status: zod.enum(["pending", "interpreting", "ready", "error"]),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * Returns aggregate stats such as total designs, material breakdowns, and recent activity
+ * @summary Get design statistics
+ */
+export const GetDesignStatsResponse = zod.object({
+  total: zod.number(),
+  readyCount: zod.number(),
+  pendingCount: zod.number(),
+  materialBreakdown: zod.array(
+    zod.object({
+      material: zod.string(),
+      count: zod.number(),
+    }),
+  ),
+  recentDesigns: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      rawDescription: zod.string(),
+      status: zod.enum(["pending", "interpreting", "ready", "error"]),
+      designType: zod.string().nullish(),
+      summary: zod.string().nullish(),
+      createdAt: zod.coerce.date(),
+      updatedAt: zod.coerce.date(),
+    }),
+  ),
+  designTypeBreakdown: zod.array(
+    zod.object({
+      designType: zod.string(),
+      count: zod.number(),
+    }),
+  ),
+});
