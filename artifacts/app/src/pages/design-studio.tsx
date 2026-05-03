@@ -26,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
 import {
   Loader2,
   ArrowRight,
@@ -40,6 +41,7 @@ import {
   FileText,
   ChevronDown,
   ChevronUp,
+  Download,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -53,8 +55,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
-type MobilePanel = "spec" | "model" | "details";
+import { exportComponentsAsSTL } from "@/lib/stl-export";
 
 export default function DesignStudio() {
   const { id } = useParams<{ id: string }>();
@@ -741,6 +742,17 @@ export default function DesignStudio() {
                 disabled={interpretDesign.isPending}
               >
                 <Play className="w-3 h-3 mr-2" /> Retry
+              </Button>
+            )}
+            {design.status === "ready" && activeComponents.length > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full rounded-none font-mono text-xs text-primary border-primary/30 hover:bg-primary/10"
+                onClick={() => exportComponentsAsSTL(activeComponents, design.name || "design")}
+                data-testid="button-export-stl"
+              >
+                <Download className="w-3 h-3 mr-2" /> Export STL
               </Button>
             )}
             <DeleteButton />

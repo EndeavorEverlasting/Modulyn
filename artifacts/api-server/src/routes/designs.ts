@@ -54,9 +54,9 @@ function validateStructuredData(raw: unknown): Record<string, unknown> {
   d.components = validateComponents(d.components, "primary");
   if (!d.unit) d.unit = "inches";
 
-  // Strip null values from optional string fields — Zod expects undefined, not null
-  for (const key of ["printTimeEstimate", "weightCapacity", "installationNotes", "estimatedCost", "summary", "designType"]) {
-    if (d[key] === null) d[key] = undefined;
+  // Normalize nullable optional string fields: AI may return null, schema expects undefined
+  for (const key of ["printTimeEstimate", "weightCapacity", "installationNotes", "estimatedCost"]) {
+    if (d[key] === null) delete d[key];
   }
 
   // Validate design variants if present
