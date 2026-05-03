@@ -48,11 +48,16 @@ Return ONLY valid JSON matching this exact schema:
   "buildInstructions": string[] (ordered step-by-step instructions, 6-12 steps)
 }
 
+Rules for components:
+- Each entry in the "components" array represents ONE physical part (quantity = 1).
+- If the same part type appears multiple times (e.g. 4 table legs), include a SEPARATE entry for each one with its own unique x/y/z position.
+- This allows every physical piece to be rendered at its correct location in the 3D scene.
+
 Rules for 3D positioning:
 - Use a right-handed coordinate system. Y is up.
 - Position components so they form the complete assembled object.
 - The object should be centered around origin (0, 0, 0).
-- Components should be correctly positioned relative to each other (e.g. table legs at corners, top resting on legs).
+- Components should be correctly positioned relative to each other (e.g. 4 table legs at the 4 corners, top resting on legs).
 - Use realistic proportions and measurements for the described object type.`;
 
   const response = await openai.chat.completions.create({

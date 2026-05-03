@@ -277,7 +277,17 @@ export default function DesignStudio() {
               </TabsContent>
               
               <TabsContent value="blueprint" className="m-0 h-full data-[state=active]:flex flex-col">
-                {sd?.components ? <BlueprintViewer components={sd.components} /> : <div className="p-4 font-mono text-muted-foreground">No blueprints available.</div>}
+                {sd?.components ? (
+                  <BlueprintViewer
+                    components={sd.components}
+                    overallWidth={sd.overallWidth}
+                    overallHeight={sd.overallHeight}
+                    overallDepth={sd.overallDepth}
+                    unit={sd.unit}
+                  />
+                ) : (
+                  <div className="p-4 font-mono text-muted-foreground">No blueprints available.</div>
+                )}
               </TabsContent>
               
               <TabsContent value="build" className="m-0 h-full data-[state=active]:flex flex-col">

@@ -78,8 +78,22 @@ function IsometricViewer({ components }: { components: Component3D[] }) {
       return;
     }
 
-    // sort components back-to-front for painter's algorithm
-    const sorted = [...components].sort((a, b) => (a.x + a.z) - (b.x + b.z));
+    // Expand components by quantity — each entry becomes N positioned instances
+    const expanded: Component3D[] = [];
+    components.forEach((comp) => {
+      const qty = Math.max(1, comp.quantity || 1);
+      for (let i = 0; i < qty; i++) {
+        const spacing = (comp.width + 2);
+        expanded.push({
+          ...comp,
+          x: comp.x + (i - Math.floor(qty / 2)) * spacing,
+          quantity: 1,
+        });
+      }
+    });
+
+    // sort back-to-front for painter's algorithm
+    const sorted = expanded.sort((a, b) => (a.x + a.z) - (b.x + b.z));
 
     sorted.forEach((comp) => {
       const baseColor = comp.color || "#eab308";
@@ -193,7 +207,22 @@ function WebGLViewer({ components }: { components: Component3D[] }) {
     controls.maxDistance = 400;
 
     const SCALE = 0.5;
+
+    // Expand components by quantity so every physical part is rendered
+    const expanded: Component3D[] = [];
     components.forEach((comp) => {
+      const qty = Math.max(1, comp.quantity || 1);
+      for (let i = 0; i < qty; i++) {
+        const spacing = comp.width + 2;
+        expanded.push({
+          ...comp,
+          x: comp.x + (i - Math.floor(qty / 2)) * spacing,
+          quantity: 1,
+        });
+      }
+    });
+
+    expanded.forEach((comp) => {
       const color = comp.color || "#eab308";
       const mat = new THREE.MeshStandardMaterial({
         color: new THREE.Color(color),
