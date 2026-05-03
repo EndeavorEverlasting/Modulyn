@@ -16,6 +16,40 @@ import {
   GetDesignStatsResponse,
 } from "@workspace/api-zod";
 
+function validateStructuredData(raw: unknown): Record<string, unknown> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("AI output is not an object");
+  }
+  const d = raw as Record<string, unknown>;
+  const requiredNumbers = ["overallWidth", "overallHeight", "overallDepth"];
+  for (const key of requiredNumbers) {
+    if (typeof d[key] !== "number") {
+      throw new Error(`Missing or invalid field: ${key}`);
+    }
+  }
+  if (!Array.isArray(d.components) || d.components.length === 0) {
+    throw new Error("components must be a non-empty array");
+  }
+  if (!Array.isArray(d.buildInstructions) || d.buildInstructions.length === 0) {
+    throw new Error("buildInstructions must be a non-empty array");
+  }
+  const validShapes = new Set(["box", "cylinder", "sphere"]);
+  d.components = (d.components as Record<string, unknown>[]).map((c, i) => {
+    const comp = c as Record<string, unknown>;
+    const numFields = ["width", "height", "depth", "x", "y", "z"];
+    for (const f of numFields) {
+      if (typeof comp[f] !== "number") {
+        throw new Error(`Component[${i}] missing numeric field: ${f}`);
+      }
+    }
+    if (!validShapes.has(comp.shape as string)) comp.shape = "box";
+    if (typeof comp.quantity !== "number") comp.quantity = 1;
+    return comp;
+  });
+  if (!d.unit) d.unit = "inches";
+  return d;
+}
+
 const router: IRouter = Router();
 
 async function interpretDescription(rawDescription: string) {
@@ -71,7 +105,8 @@ Rules for 3D positioning:
   });
 
   const content = response.choices[0]?.message?.content ?? "{}";
-  return JSON.parse(content);
+  const raw = JSON.parse(content);
+  return validateStructuredData(raw);
 }
 
 router.get("/designs", async (_req, res): Promise<void> => {
