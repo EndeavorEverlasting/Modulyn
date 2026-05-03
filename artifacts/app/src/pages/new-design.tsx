@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useCreateDesign } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
@@ -20,10 +20,12 @@ export default function NewDesign() {
   
   const createDesign = useCreateDesign();
 
-  // Update description when transcript changes
-  if (isRecording && transcript !== description) {
-    setDescription(transcript);
-  }
+  // Sync transcript → description while recording (inside useEffect to avoid state update during render)
+  useEffect(() => {
+    if (isRecording && transcript) {
+      setDescription(transcript);
+    }
+  }, [isRecording, transcript]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
