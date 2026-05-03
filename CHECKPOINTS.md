@@ -48,6 +48,22 @@ git push origin HEAD:checkpoint/YYYY-MM-DD
 | **Can diff against** | Yes (`git diff checkpoint/YYYY-MM-DD`) | Yes |
 | **Visible in GitHub UI** | Under Releases/Tags | Under Branches |
 
+## Automatic GitHub Sync
+
+After every task merge, the post-merge script (`scripts/post-merge.sh`) automatically pushes the latest code to GitHub (`main` branch). No manual steps are needed to keep GitHub in sync.
+
+**How it works:**
+- The script runs automatically after each Replit task merge.
+- It uses the `GITHUB_TOKEN` secret and `GITHUB_REPO` environment variable.
+- The push uses `--force-with-lease` (safe force push) to ensure GitHub stays current.
+- The token value is redacted from all log output.
+
+**Requirements:**
+- `GITHUB_TOKEN` — a GitHub personal access token (PAT) with `repo` scope, set as a Replit secret. Use a token with no expiry or a long-lived one for uninterrupted automation.
+- `GITHUB_REPO` — the full GitHub repo URL (e.g. `https://github.com/owner/repo`), set as a Replit environment variable.
+
+If either variable is missing, the push step is skipped gracefully and a warning is logged.
+
 ## Existing Checkpoints
 
 | Date | Notes |
